@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Inventory Count (iPad Optimized)</title>
+<style>
+  /* 全局样式 */
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background:#f2f2f7; margin:0; padding:16px; font-size: 14px; color: #333; }
+  .container { max-width: 960px; margin: 0 auto; background: #fff; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-radius: 12px; }
+
+  /* 顶部输入区域布局 */
+  .top { display:flex; align-items:flex-start; gap:10px; flex-wrap: wrap; }
+  .left { flex:1; min-width: 300px; }
+  
+  .input-row { display: flex; gap: 10px; margin-bottom: 10px; }
+  .input-wrapper { position: relative; flex: 1; }
+  
+  /* 输入框样式 */
+  input, textarea { 
+    width: 100%; box-sizing: border-box; padding: 10px 12px; 
+    font-size: 16px; height: 44px; /* iPad 友好高度 */
+    border: 1px solid #d1d1d6; border-radius: 8px; 
+    background: #fff;
+    appearance: none; /* 移除 iOS 默认阴影 */
+  }
+  input:focus { border-color: #007aff; outline: none; box-shadow: 0 0 0 2px rgba(0,122,255,0.2); }
+  
+  #selectedName { background-color: #f2f2f7; color: #8e8e93; cursor: not-allowed; border-color: #e5e5ea; }
+
+  /* 按钮样式 */
+  button { padding: 8px 16px; margin: 0; font-size: 14px; cursor: pointer; border-radius: 8px; border: none; font-weight: 500; transition: opacity 0.2s; }
+  button:active { opacity: 0.7; }
+  
+  #addRecord { background: #007aff; color: white; width: 100px; height: 98px; font-size: 18px; font-weight: bold; }
+  #exportCSV { background: #34c759; color: white; }
+  #clearAll { background: #ff3b30; color: white; }
+  
+  /* 搜索建议下拉框 */
+  #suggestions { 
+    border: 1px solid #d1d1d6; max-height: 250px; overflow-y: auto; 
+    background: #fff; position: absolute; z-index: 1000; 
+    width: 100%; box-shadow: 0 8px 16px rgba(0,0,0,0.15); border-radius: 8px; margin-top: 4px; 
+    display: none; 
+  }
+  #suggestions.show { display: block; }
+  #suggestions div { padding: 12px 14px; cursor: pointer; border-bottom: 1px solid #f2f2f7; font-size: 16px; }
+  #suggestions div:hover { background: #f2f2f7; }
+  #suggestions div:last-child { border-bottom: none; }
+
+  /* 底部控制栏 */
+  #controls { margin-top: 20px; display:flex; gap:10px; align-items:center; border-top: 1px solid #e5e5ea; padding-top: 15px; }
+
+  /* 表格样式 */
+  table { border-collapse: collapse; width: 100%; margin-top: 20px; font-size: 15px; table-layout: fixed; }
+  th { background: #f2f2f7; color: #666; font-weight: 600; padding: 10px; text-align: left; border-bottom: 2px solid #e5e5ea; }
+  td { border-bottom: 1px solid #e5e5ea; padding: 8px; vertical-align: middle; }
+  
+  /* 表格内的输入框 */
+  .smallInput { 
+    width: 100%; border: 1px solid transparent; background: transparent; 
+    height: 36px; font-size: 15px; padding: 0 4px; border-radius: 4px;
+  }
+  .smallInput:focus { background: #fff; border-color: #007aff; }
+
+  /* 表格内的删除按钮 */
+  .delButton { background: transparent; color: #c7c7cc; font-size: 18px; padding: 4px 8px; }
+  .delButton:hover { color: #ff3b30; background: rgba(255,59,48,0.1); }
+  
+  /* 响应式适配 */
+  @media (max-width: 600px) {
+    .top { flex-direction: column; }
+    #addRecord { width: 100%; height: 50px; }
+    .container { padding: 12px; }
+    th, td { padding: 6px; font-size: 13px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="top">
+    <div class="left">
+      <div class="input-row">
+        <div class="input-wrapper">
+          <input type="text" id="search" placeholder="Search Code/Name..." autocomplete="off" />
+          <div id="suggestions"></div>
+        </div>
+        <input type="text" id="selectedName" placeholder="Item Name" readonly style="flex:1.2;" />
+      </div>
+      
+      <div class="input-row">
+        <input type="text" id="quantityInput" inputmode="decimal" placeholder="Qty (e.g. 12*3)" style="flex:0.6;" />
+        <input type="text" id="noteInput" placeholder="Note (optional)" style="flex:1;" />
+      </div>
+    </div>
+    
+    <div>
+      <button id="addRecord" title="Add to list (Enter)">ADD</button>
+    </div>
+  </div>
+
+  <div id="controls">
+    <button id="exportCSV">⬇ Export CSV</button>
+    <div style="flex:1;"></div>
+    <span style="font-size:13px; color:#888; margin-right:10px;" id="recordCount">0 items</span>
+    <button id="clearAll">⚠ Clear All</button>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width:18%">Code</th>
+        <th style="width:32%">Name</th>
+        <th style="width:15%">Qty</th>
+        <th style="width:25%">Note</th>
+        <th style="width:10%; text-align:center;">Del</th>
+      </tr>
+    </thead>
+    <tbody id="recordTable"></tbody>
+  </table>
+</div>
+
+<script>
+  // 1. 默认测试数据 (作为备用)
+  let products = {
+    "101": "Apple Red",
+    "102": "Banana Cavendish",
+    "103": "Cherry Juice Box",
+    "201": "Dish Detergent 500ml",
+    "205": "Eggs Large (Dozen)"
+  };
+  
+  let records = JSON.parse(localStorage.getItem("records") || "[]");
+  let currentSelectedId = null; 
+
+  // 尝试加载外部 JSON
+  fetch("products.json")
+    .then(res => {
+        if (!res.ok) throw new Error("File not found");
+        return res.json();
+    })
+    .then(data => { products = data; })
+    .catch(err => console.log("Using built-in demo data."));
+
+  const searchInput = document.getElementById("search");
+  const suggestionsDiv = document.getElementById("suggestions");
+  const selectedNameInput = document.getElementById("selectedName");
+  const quantityInput = document.getElementById("quantityInput");
+  const noteInput = document.getElementById("noteInput");
+
+  // --- 核心计算函数 (强制2位小数) ---
+  function safeCalculate(expression) {
+      if(!expression) return "";
+      try {
+          // 只保留：数字、小数点、加减乘除、括号
+          const sanitized = String(expression).replace(/[^-()\d/*+.]/g, "");
+          if(!sanitized) return expression;
+          
+          // 执行计算
+          const result = new Function('return ' + sanitized)();
+          
+          // 【关键点】四舍五入保留2位小数
+          // 10/3 = 3.33; 10 = 10; 5.556 = 5.56
+          return Math.round(result * 100) / 100;
+      } catch (e) {
+          alert("Invalid math expression! Please check your input.");
+          return null;
+      }
+  }
+
+  // --- 搜索逻辑 ---
+  searchInput.addEventListener("input", () => {
+    const val = searchInput.value.toLowerCase().trim();
+    currentSelectedId = null; 
+    suggestionsDiv.innerHTML = "";
+    
+    if (val === "") { 
+        selectedNameInput.value = ""; 
+        suggestionsDiv.classList.remove("show");
+        return; 
+    }
+
+    const matches = Object.entries(products)
+      .filter(([id, name]) => id.toLowerCase().includes(val) || String(name).toLowerCase().includes(val))
+      .slice(0, 10);
+
+    if (matches.length > 0) {
+        suggestionsDiv.classList.add("show");
+        matches.forEach(([id, name]) => {
+            const div = document.createElement("div");
+            div.textContent = `[${id}] ${name}`;
+            div.onclick = () => {
+                searchInput.value = id;
+                selectedNameInput.value = name;
+                currentSelectedId = id; 
+                suggestionsDiv.innerHTML = "";
+                suggestionsDiv.classList.remove("show");
+                quantityInput.focus(); // 选中后直接跳到数量框
+            };
+            suggestionsDiv.appendChild(div);
+        });
+    } else {
+        suggestionsDiv.classList.remove("show");
+    }
+  });
+
+  // 点击空白处关闭建议
+  document.addEventListener('click', (e) => {
+    if (!searchInput.contains(e.target) && !suggestionsDiv.contains(e.target)) {
+      suggestionsDiv.classList.remove("show");
+    }
+  });
+
+  // --- 回车键支持 ---
+  function handleEnter(e) {
+    if (e.key === "Enter") document.getElementById("addRecord").click();
+  }
+  quantityInput.addEventListener("keyup", handleEnter);
+  noteInput.addEventListener("keyup", handleEnter);
+  searchInput.addEventListener("keyup", (e) => {
+      if(e.key === "Enter") {
+          const val = searchInput.value.trim();
+          if(products[val]) { // 精确匹配 ID
+              searchInput.value = val;
+              selectedNameInput.value = products[val];
+              currentSelectedId = val;
+              quantityInput.focus();
+              suggestionsDiv.classList.remove("show");
+          } else {
+              quantityInput.focus();
+          }
+      }
+  });
+
+  // --- 渲染表格 ---
+  function renderTable() {
+    const tbody = document.getElementById("recordTable");
+    tbody.innerHTML = "";
+    document.getElementById("recordCount").textContent = `${records.length} items`;
+
+    // 倒序：最新的在最上面
+    for (let i = records.length - 1; i >= 0; i--) {
+      const record = records[i];
+      const tr = document.createElement("tr");
+
+      // ID & Name
+      const tdId = document.createElement("td"); tdId.textContent = record.id;
+      const tdName = document.createElement("td"); 
+      tdName.textContent = record.name;
+      tdName.style.whiteSpace = "nowrap"; tdName.style.overflow="hidden"; tdName.style.textOverflow="ellipsis";
+      
+      // Quantity (可编辑)
+      const tdQty = document.createElement("td");
+      const inputQty = document.createElement("input");
+      inputQty.type = "text"; 
+      inputQty.setAttribute("inputmode", "decimal"); // 【关键】iPad 数字键盘支持
+      inputQty.value = record.qty; 
+      inputQty.className = "smallInput";
+      inputQty.onchange = () => {
+        const calculated = safeCalculate(inputQty.value);
+        if (calculated !== null) {
+            records[i].qty = calculated;
+            inputQty.value = calculated; 
+            saveData();
+        } else {
+            inputQty.value = record.qty; // 恢复旧值
+        }
+      };
+      tdQty.appendChild(inputQty);
+
+      // Note (可编辑)
+      const tdNote = document.createElement("td");
+      const inputNote = document.createElement("input");
+      inputNote.type = "text"; 
+      inputNote.value = record.note || ""; 
+      inputNote.className = "smallInput";
+      inputNote.onchange = () => {
+        records[i].note = inputNote.value;
+        saveData();
+      };
+      tdNote.appendChild(inputNote);
+
+      // Delete
+      const tdAction = document.createElement("td");
+      tdAction.style.textAlign = "center";
+      const delBtn = document.createElement("button");
+      delBtn.innerHTML = "&times;"; // X 符号
+      delBtn.className = "delButton";
+      delBtn.onclick = () => {
+        if (confirm(`Delete '${record.name}'?`)) {
+          records.splice(i, 1);
+          renderTable();
+          saveData();
+        }
+      };
+      tdAction.appendChild(delBtn);
+
+      tr.append(tdId, tdName, tdQty, tdNote, tdAction);
+      tbody.appendChild(tr);
+    }
+  }
+
+  function saveData() {
+      localStorage.setItem("records", JSON.stringify(records));
+  }
+
+  // --- 添加记录 ---
+  document.getElementById("addRecord").onclick = () => {
+    const qtyValRaw = quantityInput.value.trim();
+    const noteVal = noteInput.value.trim();
+    
+    // 1. 基础校验
+    if (!currentSelectedId && !searchInput.value) { 
+        alert("Please select a product."); 
+        searchInput.focus(); return; 
+    }
+    if (!qtyValRaw) { 
+        alert("Please enter quantity."); 
+        quantityInput.focus(); return; 
+    }
+
+    // 2. 确定产品 ID/Name
+    let finalId = currentSelectedId;
+    let finalName = selectedNameInput.value;
+    if (!finalId) {
+        // 如果用户没点下拉框，直接根据输入框的值尝试匹配
+        const searchVal = searchInput.value.trim();
+        const matchEntry = Object.entries(products).find(([k,v]) => k.toLowerCase() === searchVal.toLowerCase());
+        if(matchEntry) {
+            finalId = matchEntry[0]; finalName = matchEntry[1];
+        } else {
+             alert("Product not found. Please click a suggestion from the list.");
+             return;
+        }
+    }
+
+    // 3. 计算并保留两位小数
+    const finalQty = safeCalculate(qtyValRaw);
+    if(finalQty === null) return;
+
+    // 4. 保存
+    records.push({ id: finalId, name: finalName, qty: finalQty, note: noteVal });
+    saveData();
+    renderTable();
+
+    // 5. 重置表单，焦点回到搜索框
+    searchInput.value = ""; 
+    selectedNameInput.value = ""; 
+    quantityInput.value = ""; 
+    noteInput.value = "";
+    currentSelectedId = null;
+    searchInput.focus();
+  };
+
+  // --- 导出 CSV (修复逗号问题 + 强制2位小数) ---
+  document.getElementById("exportCSV").onclick = () => {
+    if(records.length === 0) { alert("No records to export."); return; }
+    
+    // 处理逗号：如果有逗号，加双引号
+    const escapeCsv = (txt) => {
+        if(!txt) return "";
+        const str = String(txt);
+        return str.includes(",") ? `"${str}"` : str;
+    };
+
+    // 强制保留2位小数的格式化函数
+    const formatNumber = (num) => {
+        return Math.round(Number(num) * 100) / 100; 
+    };
+
+    const rows = [["Code", "Name", "Qty", "Note"]];
+    records.forEach(r => rows.push([
+        escapeCsv(r.id), 
+        escapeCsv(r.name), 
+        formatNumber(r.qty), // 导出时再次应用格式化
+        escapeCsv(r.note)
+    ]));
+
+    // 添加 BOM \uFEFF 防止中文乱码 (兼容 Excel)
+    const csvContent = "data:text/csv;charset=utf-8,\uFEFF" + rows.map(e => e.join(",")).join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    const dateStr = new Date().toISOString().slice(0,10);
+    link.setAttribute("download", `Inventory_${dateStr}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // --- 清空所有 ---
+  document.getElementById("clearAll").onclick = () => {
+    if (records.length > 0 && confirm("Are you sure you want to clear ALL records?")) {
+      records = [];
+      localStorage.removeItem("records");
+      renderTable();
+    }
+  };
+
+  // 初始化
+  renderTable();
+</script>
+</body>
+</html>
