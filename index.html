@@ -122,59 +122,54 @@
 </div>
 
 <script>
-// 1. 初始化为空对象，不再放测试数据
-let products = {};
+  // --- 1. 全局变量初始化 ---
+  let products = {}; // 产品库
+  let currentSelectedId = null; // 当前选中的产品 ID
+  
+  // 从本地缓存读取盘点记录，如果没有则初始化为空数组
+  // 之前的报错 "records is not defined" 就是因为少了这一行
+  let records = JSON.parse(localStorage.getItem("records")) || [];
 
-// 2. 尝试获取 products.json
-fetch('products.json')
+  // --- 2. 加载外部产品数据 ---
+  fetch('products.json')
     .then(response => {
         if (!response.ok) {
-            // 如果文件不存在或路径不对，直接抛出错误
-            throw new Error('未找到 products.json 文件，请检查路径是否正确。');
+            throw new Error('未找到 products.json 文件，请检查路径。');
         }
         return response.json();
     })
     .then(data => {
         products = data;
         console.log('产品数据加载成功:', Object.keys(products).length, '个条目');
-        
-        // 确保数据加载后再初始化表格或搜索功能
-        if (typeof renderTable === "function") {
-            renderTable(); 
-        }
+        // 加载成功后，刷新一次表格以确保名称能显示
+        renderTable(); 
     })
     .catch(error => {
-        // 3. 抓不到文件时，直接弹窗报错
         console.error('加载失败:', error);
         alert('【系统报错】无法读取产品数据库 (products.json)！\n原因: ' + error.message);
     });
+
   const searchInput = document.getElementById("search");
   const suggestionsDiv = document.getElementById("suggestions");
   const selectedNameInput = document.getElementById("selectedName");
   const quantityInput = document.getElementById("quantityInput");
   const noteInput = document.getElementById("noteInput");
 
-  // --- 核心计算函数 (强制2位小数) ---
+  // --- 3. 核心计算函数 (保留2位小数) ---
   function safeCalculate(expression) {
       if(!expression) return "";
       try {
-          // 只保留：数字、小数点、加减乘除、括号
           const sanitized = String(expression).replace(/[^-()\d/*+.]/g, "");
           if(!sanitized) return expression;
-          
-          // 执行计算
           const result = new Function('return ' + sanitized)();
-          
-          // 【关键点】四舍五入保留2位小数
-          // 10/3 = 3.33; 10 = 10; 5.556 = 5.56
           return Math.round(result * 100) / 100;
       } catch (e) {
-          alert("Invalid math expression! Please check your input.");
+          alert("计算公式错误，请检查输入。");
           return null;
       }
   }
 
-  // --- 搜索逻辑 ---
+  // --- 4. 搜索建议逻辑 ---
   searchInput.addEventListener("input", () => {
     const val = searchInput.value.toLowerCase().trim();
     currentSelectedId = null; 
@@ -201,7 +196,7 @@ fetch('products.json')
                 currentSelectedId = id; 
                 suggestionsDiv.innerHTML = "";
                 suggestionsDiv.classList.remove("show");
-                quantityInput.focus(); // 选中后直接跳到数量框
+                quantityInput.focus();
             };
             suggestionsDiv.appendChild(div);
         });
@@ -210,56 +205,32 @@ fetch('products.json')
     }
   });
 
-  // 点击空白处关闭建议
   document.addEventListener('click', (e) => {
     if (!searchInput.contains(e.target) && !suggestionsDiv.contains(e.target)) {
       suggestionsDiv.classList.remove("show");
     }
   });
 
-  // --- 回车键支持 ---
-  function handleEnter(e) {
-    if (e.key === "Enter") document.getElementById("addRecord").click();
-  }
-  quantityInput.addEventListener("keyup", handleEnter);
-  noteInput.addEventListener("keyup", handleEnter);
-  searchInput.addEventListener("keyup", (e) => {
-      if(e.key === "Enter") {
-          const val = searchInput.value.trim();
-          if(products[val]) { // 精确匹配 ID
-              searchInput.value = val;
-              selectedNameInput.value = products[val];
-              currentSelectedId = val;
-              quantityInput.focus();
-              suggestionsDiv.classList.remove("show");
-          } else {
-              quantityInput.focus();
-          }
-      }
-  });
-
-  // --- 渲染表格 ---
+  // --- 5. 渲染表格 ---
   function renderTable() {
     const tbody = document.getElementById("recordTable");
+    if (!tbody) return;
     tbody.innerHTML = "";
     document.getElementById("recordCount").textContent = `${records.length} items`;
 
-    // 倒序：最新的在最上面
     for (let i = records.length - 1; i >= 0; i--) {
       const record = records[i];
       const tr = document.createElement("tr");
 
-      // ID & Name
       const tdId = document.createElement("td"); tdId.textContent = record.id;
       const tdName = document.createElement("td"); 
       tdName.textContent = record.name;
       tdName.style.whiteSpace = "nowrap"; tdName.style.overflow="hidden"; tdName.style.textOverflow="ellipsis";
       
-      // Quantity (可编辑)
       const tdQty = document.createElement("td");
       const inputQty = document.createElement("input");
       inputQty.type = "text"; 
-      inputQty.setAttribute("inputmode", "decimal"); // 【关键】iPad 数字键盘支持
+      inputQty.setAttribute("inputmode", "decimal");
       inputQty.value = record.qty; 
       inputQty.className = "smallInput";
       inputQty.onchange = () => {
@@ -269,12 +240,11 @@ fetch('products.json')
             inputQty.value = calculated; 
             saveData();
         } else {
-            inputQty.value = record.qty; // 恢复旧值
+            inputQty.value = record.qty;
         }
       };
       tdQty.appendChild(inputQty);
 
-      // Note (可编辑)
       const tdNote = document.createElement("td");
       const inputNote = document.createElement("input");
       inputNote.type = "text"; 
@@ -286,11 +256,10 @@ fetch('products.json')
       };
       tdNote.appendChild(inputNote);
 
-      // Delete
       const tdAction = document.createElement("td");
       tdAction.style.textAlign = "center";
       const delBtn = document.createElement("button");
-      delBtn.innerHTML = "&times;"; // X 符号
+      delBtn.innerHTML = "&times;";
       delBtn.className = "delButton";
       delBtn.onclick = () => {
         if (confirm(`Delete '${record.name}'?`)) {
@@ -310,12 +279,11 @@ fetch('products.json')
       localStorage.setItem("records", JSON.stringify(records));
   }
 
-  // --- 添加记录 ---
+  // --- 6. 添加记录 ---
   document.getElementById("addRecord").onclick = () => {
     const qtyValRaw = quantityInput.value.trim();
     const noteVal = noteInput.value.trim();
     
-    // 1. 基础校验
     if (!currentSelectedId && !searchInput.value) { 
         alert("Please select a product."); 
         searchInput.focus(); return; 
@@ -325,31 +293,28 @@ fetch('products.json')
         quantityInput.focus(); return; 
     }
 
-    // 2. 确定产品 ID/Name
     let finalId = currentSelectedId;
     let finalName = selectedNameInput.value;
+    
+    // 如果没点下拉框直接回车，尝试精确匹配
     if (!finalId) {
-        // 如果用户没点下拉框，直接根据输入框的值尝试匹配
         const searchVal = searchInput.value.trim();
-        const matchEntry = Object.entries(products).find(([k,v]) => k.toLowerCase() === searchVal.toLowerCase());
-        if(matchEntry) {
-            finalId = matchEntry[0]; finalName = matchEntry[1];
+        if(products[searchVal]) {
+            finalId = searchVal;
+            finalName = products[searchVal];
         } else {
-             alert("Product not found. Please click a suggestion from the list.");
+             alert("Product not found. Please select from the list.");
              return;
         }
     }
 
-    // 3. 计算并保留两位小数
     const finalQty = safeCalculate(qtyValRaw);
     if(finalQty === null) return;
 
-    // 4. 保存
     records.push({ id: finalId, name: finalName, qty: finalQty, note: noteVal });
     saveData();
     renderTable();
 
-    // 5. 重置表单，焦点回到搜索框
     searchInput.value = ""; 
     selectedNameInput.value = ""; 
     quantityInput.value = ""; 
@@ -358,43 +323,51 @@ fetch('products.json')
     searchInput.focus();
   };
 
-  // --- 导出 CSV (修复逗号问题 + 强制2位小数) ---
+  // --- 7. 回车键支持 ---
+  function handleEnter(e) {
+    if (e.key === "Enter") document.getElementById("addRecord").click();
+  }
+  quantityInput.addEventListener("keyup", handleEnter);
+  noteInput.addEventListener("keyup", handleEnter);
+  searchInput.addEventListener("keyup", (e) => {
+      if(e.key === "Enter") {
+          const val = searchInput.value.trim();
+          if(products[val]) {
+              searchInput.value = val;
+              selectedNameInput.value = products[val];
+              currentSelectedId = val;
+              quantityInput.focus();
+              suggestionsDiv.classList.remove("show");
+          }
+      }
+  });
+
+  // --- 8. 导出与清空 ---
   document.getElementById("exportCSV").onclick = () => {
     if(records.length === 0) { alert("No records to export."); return; }
-    
-    // 处理逗号：如果有逗号，加双引号
     const escapeCsv = (txt) => {
         if(!txt) return "";
         const str = String(txt);
         return str.includes(",") ? `"${str}"` : str;
     };
-
-    // 强制保留2位小数的格式化函数
-    const formatNumber = (num) => {
-        return Math.round(Number(num) * 100) / 100; 
-    };
-
     const rows = [["Code", "Name", "Qty", "Note"]];
     records.forEach(r => rows.push([
         escapeCsv(r.id), 
         escapeCsv(r.name), 
-        formatNumber(r.qty), // 导出时再次应用格式化
+        r.qty,
         escapeCsv(r.note)
     ]));
 
-    // 添加 BOM \uFEFF 防止中文乱码 (兼容 Excel)
     const csvContent = "data:text/csv;charset=utf-8,\uFEFF" + rows.map(e => e.join(",")).join("\n");
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    const dateStr = new Date().toISOString().slice(0,10);
-    link.setAttribute("download", `Inventory_${dateStr}.csv`);
+    link.setAttribute("download", `Inventory_${new Date().toISOString().slice(0,10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
-  // --- 清空所有 ---
   document.getElementById("clearAll").onclick = () => {
     if (records.length > 0 && confirm("Are you sure you want to clear ALL records?")) {
       records = [];
@@ -403,7 +376,7 @@ fetch('products.json')
     }
   };
 
-  // 初始化
+  // 初始化页面表格
   renderTable();
 </script>
 </body>
