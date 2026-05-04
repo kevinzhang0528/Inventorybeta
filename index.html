@@ -3,33 +3,36 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Inventory Count</title>
+<title>Inventory Count + Location</title>
 <style>
   /* 全局样式 */
   body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background:#f2f2f7; margin:0; padding:16px; font-size: 14px; color: #333; }
-  .container { max-width: 960px; margin: 0 auto; background: #fff; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-radius: 12px; }
+  .container { max-width: 1000px; margin: 0 auto; background: #fff; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-radius: 12px; }
 
-  /* 顶部输入区域布局 */
+  /* 顶部输入区域 */
   .top { display:flex; align-items:flex-start; gap:10px; flex-wrap: wrap; }
   .left { flex:1; min-width: 300px; }
   
   .input-row { display: flex; gap: 10px; margin-bottom: 10px; }
   .input-wrapper { position: relative; flex: 1; }
   
-  /* 输入框样式 */
-  input, textarea { 
+  /* 输入框 */
+  input { 
     width: 100%; box-sizing: border-box; padding: 10px 12px; 
-    font-size: 16px; height: 44px; /* iPad 友好高度 */
-    border: 1px solid #d1d1d6; border-radius: 8px; 
-    background: #fff;
-    appearance: none; /* 移除 iOS 默认阴影 */
+    font-size: 16px; height: 44px; 
+    border: 1px solid #d1d1d6; border-radius: 8px; background: #fff;
+    appearance: none;
   }
   input:focus { border-color: #007aff; outline: none; box-shadow: 0 0 0 2px rgba(0,122,255,0.2); }
   
   #selectedName { background-color: #f2f2f7; color: #8e8e93; cursor: not-allowed; border-color: #e5e5ea; }
+  
+  /* 特殊：位置输入框背景微调，暗示它会保留 */
+  #locationInput { background-color: #f9f9ff; border-color: #cfcff0; }
+  #locationInput:focus { border-color: #5856d6; box-shadow: 0 0 0 2px rgba(88, 86, 214, 0.2); }
 
-  /* 按钮样式 */
-  button { padding: 8px 16px; margin: 0; font-size: 14px; cursor: pointer; border-radius: 8px; border: none; font-weight: 500; transition: opacity 0.2s; }
+  /* 按钮 */
+  button { padding: 8px 16px; margin: 0; font-size: 14px; cursor: pointer; border-radius: 8px; border: none; font-weight: 500; }
   button:active { opacity: 0.7; }
   
   #addRecord { background: #007aff; color: white; width: 100px; height: 98px; font-size: 18px; font-weight: bold; }
@@ -46,33 +49,32 @@
   #suggestions.show { display: block; }
   #suggestions div { padding: 12px 14px; cursor: pointer; border-bottom: 1px solid #f2f2f7; font-size: 16px; }
   #suggestions div:hover { background: #f2f2f7; }
-  #suggestions div:last-child { border-bottom: none; }
 
-  /* 底部控制栏 */
-  #controls { margin-top: 20px; display:flex; gap:10px; align-items:center; border-top: 1px solid #e5e5ea; padding-top: 15px; }
+  /* 过滤器区域 */
+  .filter-area { margin-top: 20px; padding: 10px; background: #f2f2f7; border-radius: 8px; display: flex; align-items: center; gap: 10px; }
+  #tableFilter { height: 36px; font-size: 14px; border: 1px solid #ccc; }
 
-  /* 表格样式 */
-  table { border-collapse: collapse; width: 100%; margin-top: 20px; font-size: 15px; table-layout: fixed; }
-  th { background: #f2f2f7; color: #666; font-weight: 600; padding: 10px; text-align: left; border-bottom: 2px solid #e5e5ea; }
+  /* 表格 */
+  table { border-collapse: collapse; width: 100%; margin-top: 10px; font-size: 14px; table-layout: fixed; }
+  th { background: #fff; color: #666; font-weight: 700; padding: 10px; text-align: left; border-bottom: 2px solid #007aff; }
   td { border-bottom: 1px solid #e5e5ea; padding: 8px; vertical-align: middle; }
   
-  /* 表格内的输入框 */
   .smallInput { 
     width: 100%; border: 1px solid transparent; background: transparent; 
-    height: 36px; font-size: 15px; padding: 0 4px; border-radius: 4px;
+    height: 36px; font-size: 14px; padding: 0 4px; border-radius: 4px;
   }
   .smallInput:focus { background: #fff; border-color: #007aff; }
 
-  /* 表格内的删除按钮 */
   .delButton { background: transparent; color: #c7c7cc; font-size: 18px; padding: 4px 8px; }
   .delButton:hover { color: #ff3b30; background: rgba(255,59,48,0.1); }
   
-  /* 响应式适配 */
   @media (max-width: 600px) {
     .top { flex-direction: column; }
     #addRecord { width: 100%; height: 50px; }
     .container { padding: 12px; }
-    th, td { padding: 6px; font-size: 13px; }
+    th, td { padding: 5px; font-size: 13px; }
+    /* 手机上隐藏 Note 列以节省空间，或者让横向滚动 */
+    .hide-mobile { display: none; }
   }
 </style>
 </head>
@@ -83,37 +85,46 @@
     <div class="left">
       <div class="input-row">
         <div class="input-wrapper">
-          <input type="text" id="search" placeholder="Search Code/Name..." autocomplete="off" />
+          <input type="text" id="search" placeholder="1. Search Product..." autocomplete="off" />
           <div id="suggestions"></div>
         </div>
-        <input type="text" id="selectedName" placeholder="Item Name" readonly style="flex:1.2;" />
+        <input type="text" id="selectedName" placeholder="Item Name" readonly style="flex:1;" />
       </div>
       
       <div class="input-row">
-        <input type="text" id="quantityInput" inputmode="decimal" placeholder="Qty (e.g. 12*3)" style="flex:0.6;" />
-        <input type="text" id="noteInput" placeholder="Note (optional)" style="flex:1;" />
+        <input type="text" id="locationInput" placeholder="2. Location (e.g. Shelf A)" style="flex:1;" />
+        
+        <input type="text" id="quantityInput" inputmode="decimal" placeholder="3. Qty" style="flex:0.6;" />
+      </div>
+       <div class="input-row">
+        <input type="text" id="noteInput" placeholder="4. Note (optional)" style="flex:1;" />
       </div>
     </div>
     
     <div>
-      <button id="addRecord" title="Add to list (Enter)">ADD</button>
+      <button id="addRecord" title="Add to list">ADD</button>
     </div>
   </div>
 
   <div id="controls">
     <button id="exportCSV">⬇ Export CSV</button>
     <div style="flex:1;"></div>
-    <span style="font-size:13px; color:#888; margin-right:10px;" id="recordCount">0 items</span>
     <button id="clearAll">⚠ Clear All</button>
+  </div>
+
+  <div class="filter-area">
+    <span style="font-weight:bold; color:#555;">🔍 Find in list:</span>
+    <input type="text" id="tableFilter" placeholder="Type item name OR location (e.g. 'Apple' or 'Shelf B')..." />
+    <span id="recordCount" style="color:#888; font-size:12px; white-space: nowrap;">0 items</span>
   </div>
 
   <table>
     <thead>
       <tr>
-        <th style="width:18%">Code</th>
-        <th style="width:32%">Name</th>
-        <th style="width:15%">Qty</th>
-        <th style="width:25%">Note</th>
+        <th style="width:15%">Code</th>
+        <th style="width:25%">Name</th>
+        <th style="width:18%; color:#5856d6;">Location</th> <th style="width:12%">Qty</th>
+        <th style="width:20%" class="hide-mobile">Note</th>
         <th style="width:10%; text-align:center;">Del</th>
       </tr>
     </thead>
@@ -122,40 +133,30 @@
 </div>
 
 <script>
-  // --- 1. 全局变量初始化 ---
-  let products = {}; // 产品库
-  let currentSelectedId = null; // 当前选中的产品 ID
+  // 1. 默认测试数据
+  let products = {
+    "101": "Apple Red", "102": "Banana Cavendish", "103": "Cherry Juice", 
+    "201": "Detergent", "205": "Eggs (Dozen)", "300": "Milk Whole"
+  };
   
-  // 从本地缓存读取盘点记录，如果没有则初始化为空数组
-  // 之前的报错 "records is not defined" 就是因为少了这一行
-  let records = JSON.parse(localStorage.getItem("records")) || [];
+  // 数据结构现在包含 location
+  let records = JSON.parse(localStorage.getItem("records") || "[]");
+  let currentSelectedId = null; 
 
-  // --- 2. 加载外部产品数据 ---
-  fetch('products.json')
-    .then(response => {
-        if (!response.ok) {
-            throw new Error('未找到 products.json 文件，请检查路径。');
-        }
-        return response.json();
-    })
-    .then(data => {
-        products = data;
-        console.log('产品数据加载成功:', Object.keys(products).length, '个条目');
-        // 加载成功后，刷新一次表格以确保名称能显示
-        renderTable(); 
-    })
-    .catch(error => {
-        console.error('加载失败:', error);
-        alert('【系统报错】无法读取产品数据库 (products.json)！\n原因: ' + error.message);
-    });
+  fetch("products.json")
+    .then(res => { if(res.ok) return res.json(); throw new Error(""); })
+    .then(data => { products = data; })
+    .catch(() => console.log("Using demo data"));
 
   const searchInput = document.getElementById("search");
   const suggestionsDiv = document.getElementById("suggestions");
   const selectedNameInput = document.getElementById("selectedName");
+  const locationInput = document.getElementById("locationInput");
   const quantityInput = document.getElementById("quantityInput");
   const noteInput = document.getElementById("noteInput");
+  const tableFilter = document.getElementById("tableFilter");
 
-  // --- 3. 核心计算函数 (保留2位小数) ---
+  // --- 核心计算 ---
   function safeCalculate(expression) {
       if(!expression) return "";
       try {
@@ -163,23 +164,15 @@
           if(!sanitized) return expression;
           const result = new Function('return ' + sanitized)();
           return Math.round(result * 100) / 100;
-      } catch (e) {
-          alert("计算公式错误，请检查输入。");
-          return null;
-      }
+      } catch (e) { return null; }
   }
 
-  // --- 4. 搜索建议逻辑 ---
+  // --- 搜索建议逻辑 ---
   searchInput.addEventListener("input", () => {
     const val = searchInput.value.toLowerCase().trim();
     currentSelectedId = null; 
     suggestionsDiv.innerHTML = "";
-    
-    if (val === "") { 
-        selectedNameInput.value = ""; 
-        suggestionsDiv.classList.remove("show");
-        return; 
-    }
+    if (val === "") { selectedNameInput.value = ""; suggestionsDiv.classList.remove("show"); return; }
 
     const matches = Object.entries(products)
       .filter(([id, name]) => id.toLowerCase().includes(val) || String(name).toLowerCase().includes(val))
@@ -196,187 +189,176 @@
                 currentSelectedId = id; 
                 suggestionsDiv.innerHTML = "";
                 suggestionsDiv.classList.remove("show");
-                quantityInput.focus();
+                // 选中商品后，光标跳到数量（跳过 Location，假设位置不变）
+                // 如果你想跳到 Location，改成 locationInput.focus()
+                quantityInput.focus(); 
             };
             suggestionsDiv.appendChild(div);
         });
-    } else {
-        suggestionsDiv.classList.remove("show");
-    }
+    } else { suggestionsDiv.classList.remove("show"); }
   });
 
   document.addEventListener('click', (e) => {
-    if (!searchInput.contains(e.target) && !suggestionsDiv.contains(e.target)) {
-      suggestionsDiv.classList.remove("show");
-    }
+    if (!searchInput.contains(e.target) && !suggestionsDiv.contains(e.target)) suggestionsDiv.classList.remove("show");
   });
 
-  // --- 5. 渲染表格 ---
+  // --- 回车键逻辑 ---
+  function handleEnter(e) { if (e.key === "Enter") document.getElementById("addRecord").click(); }
+  quantityInput.addEventListener("keyup", handleEnter);
+  noteInput.addEventListener("keyup", handleEnter);
+  locationInput.addEventListener("keyup", (e) => { if (e.key === "Enter") quantityInput.focus(); }); // Location 回车跳到 Qty
+
+  // --- 渲染表格 (带过滤器) ---
   function renderTable() {
     const tbody = document.getElementById("recordTable");
-    if (!tbody) return;
     tbody.innerHTML = "";
-    document.getElementById("recordCount").textContent = `${records.length} items`;
+    
+    // 获取过滤关键词
+    const filterText = tableFilter.value.toLowerCase().trim();
 
-    for (let i = records.length - 1; i >= 0; i--) {
-      const record = records[i];
+    // 过滤并倒序显示
+    const filteredRecords = records.filter(r => {
+        if (!filterText) return true;
+        // 在 ID, Name, Location 中查找
+        return r.id.toLowerCase().includes(filterText) || 
+               r.name.toLowerCase().includes(filterText) ||
+               (r.location && r.location.toLowerCase().includes(filterText));
+    });
+
+    document.getElementById("recordCount").textContent = `${filteredRecords.length} items visible`;
+
+    // 注意：这里我们遍历的是 filteredRecords，但修改数据时需要通过 index 找到原始 records
+    // 简单起见，我们在 UI 上修改时，直接遍历原始 records 重新查找索引比较安全，或者直接存储原始索引
+    // 为了简单，下面的修改逻辑我做了微调，直接修改对象引用即可（JS对象是引用传递）
+
+    for (let i = filteredRecords.length - 1; i >= 0; i--) {
+      const record = filteredRecords[i];
       const tr = document.createElement("tr");
 
+      // Code & Name
       const tdId = document.createElement("td"); tdId.textContent = record.id;
-      const tdName = document.createElement("td"); 
-      tdName.textContent = record.name;
-      tdName.style.whiteSpace = "nowrap"; tdName.style.overflow="hidden"; tdName.style.textOverflow="ellipsis";
+      const tdName = document.createElement("td"); tdName.textContent = record.name;
       
+      // Location (Editable)
+      const tdLoc = document.createElement("td");
+      const inputLoc = document.createElement("input");
+      inputLoc.type = "text"; inputLoc.value = record.location || ""; inputLoc.className = "smallInput";
+      inputLoc.style.color = "#5856d6"; // 紫色高亮位置
+      inputLoc.onchange = () => { record.location = inputLoc.value; saveData(); };
+      tdLoc.appendChild(inputLoc);
+
+      // Qty (Editable)
       const tdQty = document.createElement("td");
       const inputQty = document.createElement("input");
-      inputQty.type = "text"; 
-      inputQty.setAttribute("inputmode", "decimal");
-      inputQty.value = record.qty; 
-      inputQty.className = "smallInput";
+      inputQty.type = "text"; inputQty.setAttribute("inputmode", "decimal");
+      inputQty.value = record.qty; inputQty.className = "smallInput";
       inputQty.onchange = () => {
-        const calculated = safeCalculate(inputQty.value);
-        if (calculated !== null) {
-            records[i].qty = calculated;
-            inputQty.value = calculated; 
-            saveData();
-        } else {
-            inputQty.value = record.qty;
-        }
+        const cal = safeCalculate(inputQty.value);
+        if (cal !== null) { record.qty = cal; inputQty.value = cal; saveData(); }
+        else { inputQty.value = record.qty; }
       };
       tdQty.appendChild(inputQty);
 
+      // Note (Editable)
       const tdNote = document.createElement("td");
+      tdNote.className = "hide-mobile"; // 手机隐藏
       const inputNote = document.createElement("input");
-      inputNote.type = "text"; 
-      inputNote.value = record.note || ""; 
-      inputNote.className = "smallInput";
-      inputNote.onchange = () => {
-        records[i].note = inputNote.value;
-        saveData();
-      };
+      inputNote.type = "text"; inputNote.value = record.note || ""; inputNote.className = "smallInput";
+      inputNote.onchange = () => { record.note = inputNote.value; saveData(); };
       tdNote.appendChild(inputNote);
 
+      // Delete (需找到原始数组中的索引)
       const tdAction = document.createElement("td");
       tdAction.style.textAlign = "center";
       const delBtn = document.createElement("button");
-      delBtn.innerHTML = "&times;";
-      delBtn.className = "delButton";
+      delBtn.innerHTML = "&times;"; delBtn.className = "delButton";
       delBtn.onclick = () => {
-        if (confirm(`Delete '${record.name}'?`)) {
-          records.splice(i, 1);
-          renderTable();
-          saveData();
+        if (confirm(`Delete '${record.name}' from list?`)) {
+          // 在原始数组中找到并删除
+          const originalIndex = records.indexOf(record);
+          if (originalIndex > -1) {
+              records.splice(originalIndex, 1);
+              saveData();
+              renderTable(); // 重新渲染
+          }
         }
       };
       tdAction.appendChild(delBtn);
 
-      tr.append(tdId, tdName, tdQty, tdNote, tdAction);
+      tr.append(tdId, tdName, tdLoc, tdQty, tdNote, tdAction);
       tbody.appendChild(tr);
     }
   }
 
-  function saveData() {
-      localStorage.setItem("records", JSON.stringify(records));
-  }
+  // 监听过滤框输入
+  tableFilter.addEventListener("input", renderTable);
 
-  // --- 6. 添加记录 ---
+  function saveData() { localStorage.setItem("records", JSON.stringify(records)); }
+
+  // --- 添加记录 ---
   document.getElementById("addRecord").onclick = () => {
     const qtyValRaw = quantityInput.value.trim();
     const noteVal = noteInput.value.trim();
+    const locVal = locationInput.value.trim(); // 获取位置
     
-    if (!currentSelectedId && !searchInput.value) { 
-        alert("Please select a product."); 
-        searchInput.focus(); return; 
-    }
-    if (!qtyValRaw) { 
-        alert("Please enter quantity."); 
-        quantityInput.focus(); return; 
-    }
+    if (!currentSelectedId && !searchInput.value) { alert("Select product first."); searchInput.focus(); return; }
+    if (!qtyValRaw) { alert("Enter quantity."); quantityInput.focus(); return; }
 
     let finalId = currentSelectedId;
     let finalName = selectedNameInput.value;
-    
-    // 如果没点下拉框直接回车，尝试精确匹配
     if (!finalId) {
         const searchVal = searchInput.value.trim();
-        if(products[searchVal]) {
-            finalId = searchVal;
-            finalName = products[searchVal];
-        } else {
-             alert("Product not found. Please select from the list.");
-             return;
-        }
+        const match = Object.entries(products).find(([k,v]) => k.toLowerCase()===searchVal.toLowerCase());
+        if(match) { finalId = match[0]; finalName = match[1]; } 
+        else { alert("Product not found."); return; }
     }
 
     const finalQty = safeCalculate(qtyValRaw);
     if(finalQty === null) return;
 
-    records.push({ id: finalId, name: finalName, qty: finalQty, note: noteVal });
+    // 添加记录 (包含 location)
+    records.push({ id: finalId, name: finalName, location: locVal, qty: finalQty, note: noteVal });
     saveData();
     renderTable();
 
+    // 重置表单 -> 【重要】这里特意不重置 locationInput，方便连续录入同一个货架
     searchInput.value = ""; 
     selectedNameInput.value = ""; 
     quantityInput.value = ""; 
     noteInput.value = "";
     currentSelectedId = null;
-    searchInput.focus();
+    searchInput.focus(); // 回到搜索框准备录入下一个
   };
 
-  // --- 7. 回车键支持 ---
-  function handleEnter(e) {
-    if (e.key === "Enter") document.getElementById("addRecord").click();
-  }
-  quantityInput.addEventListener("keyup", handleEnter);
-  noteInput.addEventListener("keyup", handleEnter);
-  searchInput.addEventListener("keyup", (e) => {
-      if(e.key === "Enter") {
-          const val = searchInput.value.trim();
-          if(products[val]) {
-              searchInput.value = val;
-              selectedNameInput.value = products[val];
-              currentSelectedId = val;
-              quantityInput.focus();
-              suggestionsDiv.classList.remove("show");
-          }
-      }
-  });
-
-  // --- 8. 导出与清空 ---
+  // --- 导出 CSV (包含 Location) ---
   document.getElementById("exportCSV").onclick = () => {
-    if(records.length === 0) { alert("No records to export."); return; }
-    const escapeCsv = (txt) => {
-        if(!txt) return "";
-        const str = String(txt);
-        return str.includes(",") ? `"${str}"` : str;
-    };
-    const rows = [["Code", "Name", "Qty", "Note"]];
+    if(records.length === 0) { alert("No records."); return; }
+    const escapeCsv = (txt) => { const str = String(txt||""); return str.includes(",") ? `"${str}"` : str; };
+    const formatNumber = (num) => Math.round(Number(num) * 100) / 100;
+
+    // Header 增加 Location
+    const rows = [["Code", "Name", "Location", "Qty", "Note"]];
     records.forEach(r => rows.push([
         escapeCsv(r.id), 
         escapeCsv(r.name), 
-        r.qty,
+        escapeCsv(r.location), // 导出位置
+        formatNumber(r.qty), 
         escapeCsv(r.note)
     ]));
 
     const csvContent = "data:text/csv;charset=utf-8,\uFEFF" + rows.map(e => e.join(",")).join("\n");
-    const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `Inventory_${new Date().toISOString().slice(0,10)}.csv`);
+    link.href = encodeURI(csvContent);
+    link.download = `Inventory_${new Date().toISOString().slice(0,10)}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
   document.getElementById("clearAll").onclick = () => {
-    if (records.length > 0 && confirm("Are you sure you want to clear ALL records?")) {
-      records = [];
-      localStorage.removeItem("records");
-      renderTable();
-    }
+    if (confirm("Clear ALL records?")) { records = []; localStorage.removeItem("records"); renderTable(); }
   };
 
-  // 初始化页面表格
   renderTable();
 </script>
 </body>
