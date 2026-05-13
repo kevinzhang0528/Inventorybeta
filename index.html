@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Inventory Count (Clear Location)</title>
+<title>Inventory Count 37th St</title>
 <style>
   /* 全局样式 */
   body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background:#f2f2f7; margin:0; padding:16px; font-size: 14px; color: #333; }
@@ -28,6 +28,9 @@
   #selectedName { background-color: #f2f2f7; color: #8e8e93; cursor: not-allowed; border-color: #e5e5ea; }
   #rackInput { background-color: #f9f9ff; border-color: #cfcff0; text-align: center; font-weight: bold; color: #5856d6; }
   #rackInput:focus { border-color: #5856d6; box-shadow: 0 0 0 2px rgba(88, 86, 214, 0.2); }
+
+  /* 新增：规格显示区域样式 */
+  .spec-input { background-color: #f2f2f7; color: #666; font-size: 14px; height: 36px; border-color: #e5e5ea; cursor: default; }
 
   /* 按钮通用 */
   button { padding: 8px 16px; margin: 0; font-size: 14px; cursor: pointer; border-radius: 8px; border: none; font-weight: 500; }
@@ -85,6 +88,7 @@
 <div class="container">
   <div class="top">
     <div class="left">
+      <!-- Row 1: Product Search -->
       <div class="input-row">
         <div class="input-wrapper">
           <input type="text" id="search" placeholder="1. Search Product..." autocomplete="off" />
@@ -93,6 +97,13 @@
         <input type="text" id="selectedName" placeholder="Item Name" readonly style="flex:1;" />
       </div>
       
+      <!-- Row 1.5: 自动弹出的规格信息 (隐藏状态) -->
+      <div class="input-row" id="specRow" style="display: none; margin-top: -5px;">
+        <input type="text" id="packSizeInfo" class="spec-input" readonly placeholder="Pack Size" style="flex:1;" />
+        <input type="text" id="palletSizeInfo" class="spec-input" readonly placeholder="Pallet Size" style="flex:1;" />
+      </div>
+      
+      <!-- Row 2: Qty -> Rack Number -> Level(A/B/C) -->
       <div class="input-row">
         <input type="text" id="quantityInput" inputmode="decimal" placeholder="2. Qty" style="flex:0.6;" />
         
@@ -105,7 +116,8 @@
         </div>
       </div>
       
-      <div class="input-row">
+      <!-- Row 3: Note -->
+       <div class="input-row">
         <input type="text" id="noteInput" placeholder="4. Note (optional)" style="flex:1;" />
       </div>
     </div>
@@ -143,13 +155,20 @@
 </div>
 
 <script>
-  // 1. 测试数据
-  let products = { "101": "Apple Red", "102": "Banana Cavendish", "103": "Cherry Juice", "201": "Detergent", "205": "Eggs (Dozen)" };
+  // 1. 测试数据 (升级为对象结构，贴合大宗食品原料)
+  let products = { 
+    "101": { name: "All-Purpose Flour", pack: "50 lb bag", pallet: "50 bags/pallet" },
+    "102": { name: "Granulated Sugar", pack: "50 lb bag", pallet: "50 bags/pallet" },
+    "103": { name: "High Fructose Corn Syrup", pack: "55 gal drum", pallet: "4 drums/pallet" }, 
+    "104": { name: "Canola Oil", pack: "35 lb jug", pallet: "60 jugs/pallet" }, 
+    "105": { name: "Whole Milk Powder", pack: "25 kg bag", pallet: "40 bags/pallet" } 
+  };
+  
   let records = JSON.parse(localStorage.getItem("records") || "[]");
   let currentSelectedId = null; 
-  let currentLevel = "A"; // 默认选中 A 层
+  let currentLevel = "A";
 
-  // A/B/C 按钮点击逻辑
+  // A/B/C 按钮逻辑
   document.querySelectorAll('.level-btn').forEach(btn => {
     btn.onclick = () => {
       document.querySelectorAll('.level-btn').forEach(b => b.classList.remove('active'));
@@ -158,15 +177,26 @@
     };
   });
 
-  // 强制货架号输入框只能输入数字
   const rackInput = document.getElementById("rackInput");
   rackInput.addEventListener("input", function() {
     this.value = this.value.replace(/[^0-9]/g, ''); 
   });
 
+  // 加载外部 JSON 并自动兼容旧格式
   fetch("products.json")
     .then(res => { if(res.ok) return res.json(); throw new Error(""); })
-    .then(data => { products = data; })
+    .then(data => { 
+        let formattedData = {};
+        for (let key in data) {
+            if (typeof data[key] === 'string') {
+                // 如果外部 JSON 还没更新，自动转为新格式防止报错
+                formattedData[key] = { name: data[key], pack: "N/A", pallet: "N/A" };
+            } else {
+                formattedData[key] = data[key];
+            }
+        }
+        products = formattedData; 
+    })
     .catch(() => console.log("Using demo data"));
 
   const searchInput = document.getElementById("search");
@@ -175,6 +205,10 @@
   const quantityInput = document.getElementById("quantityInput");
   const noteInput = document.getElementById("noteInput");
   const tableFilter = document.getElementById("tableFilter");
+  
+  const specRow = document.getElementById("specRow");
+  const packSizeInfo = document.getElementById("packSizeInfo");
+  const palletSizeInfo = document.getElementById("palletSizeInfo");
 
   function safeCalculate(expression) {
       if(!expression) return "";
@@ -186,26 +220,46 @@
       } catch (e) { return null; }
   }
 
+  // 展示规格信息
+  function showSpecs(itemData) {
+      specRow.style.display = "flex";
+      packSizeInfo.value = `Pack Size: ${itemData.pack || 'N/A'}`;
+      palletSizeInfo.value = `Pallet Size: ${itemData.pallet || 'N/A'}`;
+  }
+
+  // 隐藏规格信息
+  function hideSpecs() {
+      specRow.style.display = "none";
+      packSizeInfo.value = "";
+      palletSizeInfo.value = "";
+  }
+
   // 搜索逻辑
   searchInput.addEventListener("input", () => {
     const val = searchInput.value.toLowerCase().trim();
     currentSelectedId = null; 
     suggestionsDiv.innerHTML = "";
-    if (val === "") { selectedNameInput.value = ""; suggestionsDiv.classList.remove("show"); return; }
+    if (val === "") { 
+        selectedNameInput.value = ""; 
+        hideSpecs();
+        suggestionsDiv.classList.remove("show"); 
+        return; 
+    }
 
     const matches = Object.entries(products)
-      .filter(([id, name]) => id.toLowerCase().includes(val) || String(name).toLowerCase().includes(val))
+      .filter(([id, data]) => id.toLowerCase().includes(val) || String(data.name).toLowerCase().includes(val))
       .slice(0, 10);
 
     if (matches.length > 0) {
         suggestionsDiv.classList.add("show");
-        matches.forEach(([id, name]) => {
+        matches.forEach(([id, data]) => {
             const div = document.createElement("div");
-            div.textContent = `[${id}] ${name}`;
+            div.textContent = `[${id}] ${data.name}`;
             div.onclick = () => {
                 searchInput.value = id;
-                selectedNameInput.value = name;
+                selectedNameInput.value = data.name;
                 currentSelectedId = id; 
+                showSpecs(data); // 展开规格
                 suggestionsDiv.innerHTML = "";
                 suggestionsDiv.classList.remove("show");
                 quantityInput.focus(); 
@@ -223,6 +277,23 @@
   quantityInput.addEventListener("keyup", handleEnter);
   noteInput.addEventListener("keyup", handleEnter);
   rackInput.addEventListener("keyup", handleEnter); 
+  
+  // 搜索框回车支持
+  searchInput.addEventListener("keyup", (e) => {
+      if(e.key === "Enter") {
+          const val = searchInput.value.trim();
+          if(products[val]) { 
+              searchInput.value = val;
+              selectedNameInput.value = products[val].name;
+              currentSelectedId = val;
+              showSpecs(products[val]); // 展开规格
+              quantityInput.focus();
+              suggestionsDiv.classList.remove("show");
+          } else {
+              quantityInput.focus();
+          }
+      }
+  });
 
   // 渲染表格
   function renderTable() {
@@ -258,7 +329,6 @@
       };
       tdQty.appendChild(inputQty);
 
-      // Location (Editable in table)
       const tdLoc = document.createElement("td");
       const inputLoc = document.createElement("input");
       inputLoc.type = "text"; inputLoc.value = record.location || ""; inputLoc.className = "smallInput";
@@ -307,7 +377,7 @@
     if (!finalId) {
         const searchVal = searchInput.value.trim();
         const match = Object.entries(products).find(([k,v]) => k.toLowerCase()===searchVal.toLowerCase());
-        if(match) { finalId = match[0]; finalName = match[1]; } 
+        if(match) { finalId = match[0]; finalName = match[1].name; } 
         else { alert("Product not found."); return; }
     }
 
@@ -320,15 +390,15 @@
     saveData();
     renderTable();
 
-    // 【核心修改】全部清空并重置为 A 层
+    // 提交后清空表单并隐藏规格参数
     searchInput.value = ""; 
     selectedNameInput.value = ""; 
     quantityInput.value = ""; 
-    rackInput.value = ""; // 清空货架号
+    rackInput.value = ""; 
     noteInput.value = "";
     currentSelectedId = null;
+    hideSpecs();
     
-    // 重置 A/B/C 为默认的 A 层
     currentLevel = "A";
     document.querySelectorAll('.level-btn').forEach(b => b.classList.remove('active'));
     document.querySelector('.level-btn[data-level="A"]').classList.add('active');
