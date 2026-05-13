@@ -164,7 +164,7 @@
 </div>
 
 <script>
-  // 1. 初始化产品数据
+ // 1. 初始化产品数据
   let products = {};
   let records = JSON.parse(localStorage.getItem("records") || "[]");
   let currentSelectedId = null; 
@@ -220,13 +220,14 @@
       } catch (e) { return null; }
   }
 
-  // 展示规格信息
+  // 展示规格信息 (增加大小写键名兼容机制)
   function showSpecs(itemData) {
-      packSizeInfo.value = `Pack Size: ${itemData.pack || 'N/A'}`;
-      palletSizeInfo.value = `Pallet Size: ${itemData.pallet || 'N/A'}`;
+      const packVal = itemData.pack || itemData.Pack || itemData['Pack Size'] || itemData.packSize || 'N/A';
+      const palletVal = itemData.pallet || itemData.Pallet || itemData['Pallet Size'] || itemData.palletSize || 'N/A';
+      packSizeInfo.value = `Pack Size: ${packVal}`;
+      palletSizeInfo.value = `Pallet Size: ${palletVal}`;
   }
 
-  // 隐藏规格信息 (只是清空文字，不再隐藏框框)
   function hideSpecs() {
       packSizeInfo.value = "";
       palletSizeInfo.value = "";
@@ -257,7 +258,7 @@
                 searchInput.value = id;
                 selectedNameInput.value = data.name;
                 currentSelectedId = id; 
-                showSpecs(data); // 填入规格
+                showSpecs(data); 
                 suggestionsDiv.innerHTML = "";
                 suggestionsDiv.classList.remove("show");
                 quantityInput.focus(); 
@@ -276,15 +277,17 @@
   noteInput.addEventListener("keyup", handleEnter);
   rackInput.addEventListener("keyup", handleEnter); 
   
-  // 搜索框回车支持
+  // 搜索框回车支持 (增加大小写无缝匹配机制)
   searchInput.addEventListener("keyup", (e) => {
       if(e.key === "Enter") {
-          const val = searchInput.value.trim();
-          if(products[val]) { 
-              searchInput.value = val;
-              selectedNameInput.value = products[val].name;
-              currentSelectedId = val;
-              showSpecs(products[val]); // 填入规格
+          const val = searchInput.value.trim().toLowerCase();
+          const matchEntry = Object.entries(products).find(([k,v]) => k.toLowerCase() === val);
+          
+          if(matchEntry) { 
+              searchInput.value = matchEntry[0]; // 自动转为正确的 ID 大小写
+              selectedNameInput.value = matchEntry[1].name;
+              currentSelectedId = matchEntry[0];
+              showSpecs(matchEntry[1]); 
               quantityInput.focus();
               suggestionsDiv.classList.remove("show");
           } else {
