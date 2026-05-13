@@ -9,9 +9,9 @@
   body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background:#f2f2f7; margin:0; padding:16px; font-size: 14px; color: #333; }
   .container { max-width: 1000px; margin: 0 auto; background: #fff; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-radius: 12px; }
 
-  /* 顶部输入区域 */
-  .top { display:flex; align-items:flex-start; gap:10px; flex-wrap: wrap; }
-  .left { flex:1; min-width: 300px; }
+  /* 顶部输入区域 - 使用 align-items: stretch 让按钮自动匹配左侧高度 */
+  .top { display:flex; align-items: stretch; gap:10px; flex-wrap: wrap; }
+  .left { flex:1; min-width: 300px; display: flex; flex-direction: column; justify-content: space-between;}
   
   .input-row { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; }
   .input-wrapper { position: relative; flex: 1; }
@@ -19,7 +19,7 @@
   /* 输入框 */
   input { 
     width: 100%; box-sizing: border-box; padding: 10px 12px; 
-    font-size: 16px; height: 44px; 
+    font-size: 16px; height: 44px; /* 统一高度 */
     border: 1px solid #d1d1d6; border-radius: 8px; background: #fff;
     appearance: none;
   }
@@ -29,8 +29,8 @@
   #rackInput { background-color: #f9f9ff; border-color: #cfcff0; text-align: center; font-weight: bold; color: #5856d6; }
   #rackInput:focus { border-color: #5856d6; box-shadow: 0 0 0 2px rgba(88, 86, 214, 0.2); }
 
-  /* 新增：规格显示区域样式 */
-  .spec-input { background-color: #f2f2f7; color: #666; font-size: 14px; height: 36px; border-color: #e5e5ea; cursor: default; }
+  /* 规格显示区域样式 - 继承默认高度，仅改变背景暗示只读 */
+  .spec-input { background-color: #f2f2f7; color: #666; border-color: #e5e5ea; cursor: default; }
 
   /* 按钮通用 */
   button { padding: 8px 16px; margin: 0; font-size: 14px; cursor: pointer; border-radius: 8px; border: none; font-weight: 500; }
@@ -41,7 +41,8 @@
   .level-btn { background: #e5e5ea; color: #8e8e93; font-size: 16px; font-weight: bold; width: 44px; padding: 0; border-radius: 8px; transition: 0.2s; }
   .level-btn.active { background: #5856d6; color: white; box-shadow: 0 2px 4px rgba(88,86,214,0.3); }
 
-  #addRecord { background: #007aff; color: white; width: 100px; height: 98px; font-size: 18px; font-weight: bold; }
+  /* ADD 按钮自动填满右侧高度 */
+  #addRecord { background: #007aff; color: white; width: 100px; font-size: 18px; font-weight: bold; border-radius: 8px; }
   #exportCSV { background: #34c759; color: white; }
   #clearAll { background: #ff3b30; color: white; }
   
@@ -58,7 +59,7 @@
 
   /* 过滤器区域 */
   .filter-area { margin-top: 20px; padding: 10px; background: #f2f2f7; border-radius: 8px; display: flex; align-items: center; gap: 10px; }
-  #tableFilter { height: 36px; font-size: 14px; border: 1px solid #ccc; }
+  #tableFilter { height: 36px; font-size: 14px; border: 1px solid #ccc; flex: 1;}
 
   /* 表格 */
   table { border-collapse: collapse; width: 100%; margin-top: 10px; font-size: 14px; table-layout: fixed; }
@@ -74,6 +75,16 @@
   .delButton { background: transparent; color: #c7c7cc; font-size: 18px; padding: 4px 8px; }
   .delButton:hover { color: #ff3b30; background: rgba(255,59,48,0.1); }
   
+  /* 控制台强制放在两端 (左右对齐) */
+  #controls { 
+    margin-top: 15px; 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    border-top: 1px solid #e5e5ea; 
+    padding-top: 15px; 
+  }
+
   @media (max-width: 600px) {
     .top { flex-direction: column; }
     #addRecord { width: 100%; height: 50px; }
@@ -97,8 +108,8 @@
         <input type="text" id="selectedName" placeholder="Item Name" readonly style="flex:1;" />
       </div>
       
-      <!-- Row 1.5: 自动弹出的规格信息 (隐藏状态) -->
-      <div class="input-row" id="specRow" style="display: none; margin-top: -5px;">
+      <!-- Row 1.5: 规格信息 (一直显示) -->
+      <div class="input-row" id="specRow">
         <input type="text" id="packSizeInfo" class="spec-input" readonly placeholder="Pack Size" style="flex:1;" />
         <input type="text" id="palletSizeInfo" class="spec-input" readonly placeholder="Pallet Size" style="flex:1;" />
       </div>
@@ -117,19 +128,17 @@
       </div>
       
       <!-- Row 3: Note -->
-       <div class="input-row">
+       <div class="input-row" style="margin-bottom: 0;">
         <input type="text" id="noteInput" placeholder="4. Note (optional)" style="flex:1;" />
       </div>
     </div>
     
-    <div>
-      <button id="addRecord" title="Add to list">ADD</button>
-    </div>
+    <!-- ADD 按钮和左侧平齐 -->
+    <button id="addRecord" title="Add to list">ADD</button>
   </div>
 
   <div id="controls">
     <button id="exportCSV">⬇ Export CSV</button>
-    <div style="flex:1;"></div>
     <button id="clearAll">⚠ Clear All</button>
   </div>
 
@@ -155,15 +164,8 @@
 </div>
 
 <script>
-  // 1. 测试数据 (升级为对象结构，贴合大宗食品原料)
-  let products = { 
-    "101": { name: "All-Purpose Flour", pack: "50 lb bag", pallet: "50 bags/pallet" },
-    "102": { name: "Granulated Sugar", pack: "50 lb bag", pallet: "50 bags/pallet" },
-    "103": { name: "High Fructose Corn Syrup", pack: "55 gal drum", pallet: "4 drums/pallet" }, 
-    "104": { name: "Canola Oil", pack: "35 lb jug", pallet: "60 jugs/pallet" }, 
-    "105": { name: "Whole Milk Powder", pack: "25 kg bag", pallet: "40 bags/pallet" } 
-  };
-  
+  // 1. 初始化产品数据
+  let products = {};
   let records = JSON.parse(localStorage.getItem("records") || "[]");
   let currentSelectedId = null; 
   let currentLevel = "A";
@@ -182,14 +184,13 @@
     this.value = this.value.replace(/[^0-9]/g, ''); 
   });
 
-  // 加载外部 JSON 并自动兼容旧格式
+  // 加载外部 JSON 并自动兼容
   fetch("products.json")
     .then(res => { if(res.ok) return res.json(); throw new Error(""); })
     .then(data => { 
         let formattedData = {};
         for (let key in data) {
             if (typeof data[key] === 'string') {
-                // 如果外部 JSON 还没更新，自动转为新格式防止报错
                 formattedData[key] = { name: data[key], pack: "N/A", pallet: "N/A" };
             } else {
                 formattedData[key] = data[key];
@@ -197,7 +198,7 @@
         }
         products = formattedData; 
     })
-    .catch(() => console.log("Using demo data"));
+    .catch(() => console.log("Using demo/offline data"));
 
   const searchInput = document.getElementById("search");
   const suggestionsDiv = document.getElementById("suggestions");
@@ -206,7 +207,6 @@
   const noteInput = document.getElementById("noteInput");
   const tableFilter = document.getElementById("tableFilter");
   
-  const specRow = document.getElementById("specRow");
   const packSizeInfo = document.getElementById("packSizeInfo");
   const palletSizeInfo = document.getElementById("palletSizeInfo");
 
@@ -222,14 +222,12 @@
 
   // 展示规格信息
   function showSpecs(itemData) {
-      specRow.style.display = "flex";
       packSizeInfo.value = `Pack Size: ${itemData.pack || 'N/A'}`;
       palletSizeInfo.value = `Pallet Size: ${itemData.pallet || 'N/A'}`;
   }
 
-  // 隐藏规格信息
+  // 隐藏规格信息 (只是清空文字，不再隐藏框框)
   function hideSpecs() {
-      specRow.style.display = "none";
       packSizeInfo.value = "";
       palletSizeInfo.value = "";
   }
@@ -259,7 +257,7 @@
                 searchInput.value = id;
                 selectedNameInput.value = data.name;
                 currentSelectedId = id; 
-                showSpecs(data); // 展开规格
+                showSpecs(data); // 填入规格
                 suggestionsDiv.innerHTML = "";
                 suggestionsDiv.classList.remove("show");
                 quantityInput.focus(); 
@@ -286,7 +284,7 @@
               searchInput.value = val;
               selectedNameInput.value = products[val].name;
               currentSelectedId = val;
-              showSpecs(products[val]); // 展开规格
+              showSpecs(products[val]); // 填入规格
               quantityInput.focus();
               suggestionsDiv.classList.remove("show");
           } else {
@@ -390,7 +388,7 @@
     saveData();
     renderTable();
 
-    // 提交后清空表单并隐藏规格参数
+    // 提交后重置，并清空尺寸文字
     searchInput.value = ""; 
     selectedNameInput.value = ""; 
     quantityInput.value = ""; 
