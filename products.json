@@ -1,14 +1,4 @@
 {
-  "I10000": {
-    "name": "#N/A",
-    "pack": "No inv",
-    "pallet": "No inv"
-  },
-  "I10005": {
-    "name": "#N/A",
-    "pack": "No inv",
-    "pallet": "No inv"
-  },
   "I10006": {
     "name": "80% Unsalted Butter",
     "pack": "55.115",
@@ -58,11 +48,6 @@
     "name": "Juice Orange Concentrate 50359",
     "pack": "56.3",
     "pallet": "No Whole Pallet"
-  },
-  "I10058": {
-    "name": "#N/A",
-    "pack": "No inv",
-    "pallet": "N/A"
   },
   "I10059": {
     "name": "Rspb Bimbo Filling - NO HFCS (BIMBO 2024)",
@@ -494,6 +479,11 @@
     "pack": "50",
     "pallet": "1350"
   },
+  "I10312": {
+    "name": "N'Hance RS",
+    "pack": "50",
+    "pallet": "2000"
+  },
   "I10313": {
     "name": "TRU CLF EF",
     "pack": "50",
@@ -586,7 +576,7 @@
   },
   "I10332": {
     "name": "TiO2 Free Pumpkin Cream Cheese Filling #082924",
-    "pack": "No inv",
+    "pack": "600",
     "pallet": "N/A"
   },
   "I10335": {
@@ -596,8 +586,8 @@
   },
   "I10336": {
     "name": "Puratos Cremfil Ultim Dark Chocolate",
-    "pack": "No inv",
-    "pallet": "N/A"
+    "pack": "40",
+    "pallet": "1920"
   },
   "I10337": {
     "name": "Trem 21PF",
