@@ -626,12 +626,12 @@
   },
   "I10364": {
     "name": "POWERFresh ACE 2000 - NAFTA",
-    "pack": "No inv",
+    "pack": "50",
     "pallet": "N/A"
   },
   "I10365": {
     "name": "GRINDSTED® NG 100K",
-    "pack": "No inv",
+    "pack": "44",
     "pallet": "N/A"
   },
   "I10905": {
@@ -648,11 +648,6 @@
     "name": "AlphaSoft A11",
     "pack": "50",
     "pallet": "2000"
-  },
-  "I11006": {
-    "name": "Sea Salt, Coarse",
-    "pack": "No inv",
-    "pallet": "N/A"
   },
   "I11021": {
     "name": "Accolade 105784 Puff Pastry Margarine MB",
@@ -674,11 +669,6 @@
     "pack": "50",
     "pallet": "2000"
   },
-  "I11026": {
-    "name": "Suncol-205",
-    "pack": "No inv",
-    "pallet": "N/A"
-  },
   "I11028": {
     "name": "All purpose shortening AAK",
     "pack": "No inv",
@@ -693,15 +683,5 @@
     "name": "Perfectly Natural Cubed Apple – FFI # 2104",
     "pack": "40",
     "pallet": "10 cs / layer"
-  },
-  "I11031": {
-    "name": "#N/A",
-    "pack": "No inv",
-    "pallet": "N/A"
-  },
-  "I11032": {
-    "name": "#N/A",
-    "pack": "No inv",
-    "pallet": "N/A"
   }
 }
