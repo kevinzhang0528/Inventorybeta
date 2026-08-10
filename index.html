@@ -407,7 +407,7 @@
     searchInput.focus(); 
   };
 
-  // 导出 CSV
+  // 导出 CSV (修复 iPad 最新系统拦截下载的问题)
   document.getElementById("exportCSV").onclick = () => {
     if(records.length === 0) { alert("No records."); return; }
     const escapeCsv = (txt) => { const str = String(txt||""); return str.includes(",") ? `"${str}"` : str; };
@@ -422,20 +422,27 @@
         escapeCsv(r.note)
     ]));
 
-    const csvContent = "data:text/csv;charset=utf-8,\uFEFF" + rows.map(e => e.join(",")).join("\n");
+    // 1. 生成纯文本数据 (保留 \uFEFF 防止 Excel 乱码)
+    const csvContent = "\uFEFF" + rows.map(e => e.join(",")).join("\n");
+    
+    // 2. 使用 Blob 构建标准文件流，这是绕过 Safari 拦截的关键
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    
+    // 3. 创建虚拟下载链接并触发
     const link = document.createElement("a");
-    link.href = encodeURI(csvContent);
+    link.href = url;
     link.download = `Inventory_${new Date().toISOString().slice(0,10)}.csv`;
+    
     document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
+    
+    // 4. 清理内存 (稍微延迟一下，确保 iPad 成功弹窗后再清理)
+    setTimeout(() => {
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    }, 200);
   };
-
-  document.getElementById("clearAll").onclick = () => {
-    if (confirm("Clear ALL records?")) { records = []; localStorage.removeItem("records"); renderTable(); }
-  };
-
-  renderTable();
 </script>
 </body>
 </html>
