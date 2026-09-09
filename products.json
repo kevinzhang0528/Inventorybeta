@@ -29,6 +29,11 @@
     "pack": "2141",
     "pallet": "42.82"
   },
+  "I10014": {
+    "name": "Michel’s Cinnamon Bun Preblend",
+    "pack": " ",
+    "pallet": " "
+  },
   "I10020": {
     "name": "Emplex (101009)",
     "pack": "1800",
@@ -93,6 +98,11 @@
     "name": "700167 Dough Gum Preblend 73311",
     "pack": "2037.5",
     "pallet": "40.75"
+  },
+  "I10070": {
+    "name": "Sodium Carboxymethylcellulose Food CMC",
+    "pack": " ",
+    "pallet": " "
   },
   "I10073": {
     "name": "Cinnamon (103310)",
@@ -354,6 +364,16 @@
     "pack": "2250",
     "pallet": "50"
   },
+   "I10195": {
+    "name": "Natural Vanilla Type Flavor BBU #118-36991",
+    "pack": "40",
+    "pallet": " "
+  },
+   "I10196": {
+    "name": "Natural Butter Type Flavor OS BBU #118-40049",
+    "pack": "40",
+    "pallet": " "
+  },
   "I10201": {
     "name": "Tapioca Dextrin (102132)",
     "pack": "2500",
@@ -553,6 +573,16 @@
     "name": "WF Spice 4261",
     "pack": "2000",
     "pallet": "50"
+  },
+   "I10352": {
+    "name": "Nutmeg, Ground US35, BT",
+    "pack": " ",
+    "pallet": " "
+  },
+   "I10353": {
+    "name": "Pregel Wheat Starch",
+    "pack": " ",
+    "pallet": " "
   },
   "I10360": {
     "name": "Purac Powder 60",
